@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Claude2API Bridge",
+  "version": "1.6.0",
+  "description": "将 claude.ai 网页端转换为 OpenAI 兼容 API（分体式中转）",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "ws://localhost/*",
+    "ws://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Claude2API"
+  }
+}

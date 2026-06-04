@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Claude2API</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 280px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    background: #18181b;
+    color: #e4e4e7;
+    padding: 14px;
+  }
+  h1 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #f4f4f5; }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #71717a;
+    transition: background 0.3s;
+  }
+  .dot.connected { background: #22c55e; }
+  .dot.disconnected { background: #ef4444; }
+  label { display: block; margin-bottom: 4px; color: #a1a1aa; font-size: 12px; }
+  input {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #3f3f46;
+    background: #27272a;
+    color: #f4f4f5;
+    font-size: 12px;
+    margin-bottom: 8px;
+    outline: none;
+  }
+  input:focus { border-color: #6366f1; }
+  button {
+    width: 100%;
+    padding: 6px 0;
+    border-radius: 6px;
+    border: none;
+    background: #6366f1;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  button:hover { background: #4f46e5; }
+  .hint { color: #71717a; font-size: 11px; margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>Claude2API Bridge</h1>
+<div class="status-row">
+  <div class="dot" id="dot"></div>
+  <span id="statusText">检查连接中…</span>
+</div>
+
+<label for="urlInput">Python 服务地址</label>
+<input id="urlInput" type="text" placeholder="ws://localhost:8000/ws" />
+<button id="saveBtn">保存并重连</button>
+
+<p class="hint">确保 Python 服务已运行，且 claude.ai 已在本浏览器中登录。</p>
+
+<script src="popup.js"></script>
+</body>
+</html>
