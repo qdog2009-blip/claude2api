@@ -86,6 +86,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ recents: getRecentChats(10) });
     return true;
   }
+  if (msg.type === "get_last_reply") {
+    const els = getAssistantElements();
+    const last = els[els.length - 1];
+    const text = last ? (last.innerText || last.textContent || "").trim() : "";
+    sendResponse({ text });
+    return true;
+  }
   if (msg.type === "select_chat") {
     selectChat(msg.index).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ error: String(e) }));
     return true;

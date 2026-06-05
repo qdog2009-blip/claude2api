@@ -64,6 +64,8 @@ function connect() {
       await handleReload();
     } else if (msg.type === "get_recents") {
       await handleGetRecents(msg);
+    } else if (msg.type === "get_last_reply") {
+      await handleGetLastReply(msg);
     } else if (msg.type === "select_chat") {
       await handleSelectChat(msg);
     } else if (msg.type === "ping") {
@@ -150,6 +152,35 @@ async function handleGetRecents({ request_id }) {
     sendWs({ type: "recents_result", request_id, recents: resp.recents || [] });
   } catch (e) {
     sendWs({ type: "recents_result", request_id, error: String(e) });
+  }
+}
+
+// ─── get_last_reply 指令处理 ──────────────────────────────────────────────────
+async function handleGetLastReply({ request_id }) {
+  let tab = await findClaudeTab();
+  if (!tab) {
+    sendWs({ type: "last_reply_result", request_id, error: "No Claude tab found" });
+    return;
+  }
+
+  await chrome.tabs.update(tab.id, { active: true });
+  await sleep(200);
+
+  const ready = await waitForContentScript(tab.id, 10, 1000);
+  if (!ready) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      await sleep(500);
+    } catch (e) {
+      console.warn("[BG] Manual inject failed:", e);
+    }
+  }
+
+  try {
+    const resp = await chrome.tabs.sendMessage(tab.id, { type: "get_last_reply" });
+    sendWs({ type: "last_reply_result", request_id, text: resp.text || "" });
+  } catch (e) {
+    sendWs({ type: "last_reply_result", request_id, error: String(e) });
   }
 }
 

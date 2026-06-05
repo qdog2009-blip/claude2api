@@ -373,6 +373,36 @@ async def internal_get_recents():
     return {"recents": msg.get("recents", [])}
 
 
+@app.get("/internal/get_last_reply")
+async def internal_get_last_reply():
+    if _extension_ws is None:
+        raise HTTPException(status_code=503, detail="Chrome extension not connected")
+
+    request_id = uuid.uuid4().hex
+    queue: asyncio.Queue = asyncio.Queue()
+    _pending_internal[request_id] = queue
+
+    try:
+        await _extension_ws.send_text(json.dumps({
+            "type": "get_last_reply",
+            "request_id": request_id,
+        }))
+    except Exception as exc:
+        del _pending_internal[request_id]
+        raise HTTPException(status_code=503, detail=f"Failed to send: {exc}")
+
+    try:
+        msg = await asyncio.wait_for(queue.get(), timeout=30)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Timeout waiting for last reply")
+    finally:
+        _pending_internal.pop(request_id, None)
+
+    if "error" in msg:
+        raise HTTPException(status_code=500, detail=msg["error"])
+    return {"text": msg.get("text", "")}
+
+
 class SelectChatRequest(BaseModel):
     index: int  # 0-based
 

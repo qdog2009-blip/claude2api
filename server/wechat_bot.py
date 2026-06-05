@@ -37,6 +37,7 @@ API_KEY      = os.getenv("API_KEY", "")
 COMMANDS: dict[str, str] = {
     "/help":       "列出所有指令及说明",
     "/new":        "清除历史上下文，在网页创建新对话（可选: opus | sonnet | research）",
+    "/last":       "重新发送上一条 Claude 回复",
     "/list":       "列出最近 10 条对话（序号 + 标题）",
     "/select":     "选中指定对话，例如: /select 3",
     "/reload":     "刷新整个对话页面",
@@ -108,8 +109,8 @@ async def _handle_command(user_id: str, text: str) -> str | None:
 
     # /help
     if cmd == "/help":
-        lines = [f"{k}  —  {v}" for k, v in COMMANDS.items()]
-        return "指令列表：\n" + "\n".join(lines)
+        lines = [f"{k}\n{v}" for k, v in COMMANDS.items()]
+        return "指令列表：\n\n" + "\n\n".join(lines)
 
     # /new [opus|sonnet]
     if cmd == "/new":
@@ -138,6 +139,28 @@ async def _handle_command(user_id: str, text: str) -> str | None:
 
         model_tip = "，已启用 Research 模式（Opus）" if model == "research" else (f"，已切换模型: {model}" if model else "")
         return f"已创建新对话，历史上下文已清除{model_tip}"
+
+    # /last
+    if cmd == "/last":
+        try:
+            headers = {"Content-Type": "application/json"}
+            if API_KEY:
+                headers["Authorization"] = f"Bearer {API_KEY}"
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(f"{API_BASE}/internal/get_last_reply", headers=headers)
+                resp.raise_for_status()
+                text = resp.json().get("text", "")
+        except httpx.HTTPStatusError as e:
+            try:
+                detail = e.response.json().get("detail", str(e))
+            except Exception:
+                detail = str(e)
+            return f"获取最后回复失败: {detail}"
+        except Exception as e:
+            return f"获取最后回复失败: {e}"
+        if not text:
+            return "当前页面暂无回复内容"
+        return text
 
     # /reload
     if cmd == "/reload":
@@ -329,12 +352,17 @@ async def run_wechat_bot() -> None:
             # 指令检测
             cmd_reply = await _handle_command(msg.user_id, msg.text)
             if cmd_reply is not None:
-                print(f"[WechatBot] [cmd] → {msg.user_id}: {cmd_reply}", flush=True)
-                if cmd_reply.strip():
+                print(f"[WechatBot] [cmd] → {msg.user_id}: {cmd_reply[:80]}", flush=True)
+                cmd_parts = [p.strip() for p in cmd_reply.split(SPLIT_MARKER) if p.strip()]
+                if not cmd_parts:
+                    cmd_parts = [cmd_reply] if cmd_reply.strip() else []
+                for i, part in enumerate(cmd_parts):
                     try:
-                        await bot.reply(msg, cmd_reply)
+                        await bot.reply(msg, part)
                     except Exception as e:
                         print(f"[WechatBot] 指令回复失败: {e}", flush=True)
+                    if i < len(cmd_parts) - 1:
+                        await asyncio.sleep(0.5)
                 return
 
             # 检查是否有缓存图片（未超时则合并）
