@@ -426,7 +426,7 @@ async function handleNewChat(model) {
 
   if (model === "research") {
     // research 模式：先切换到 opus，再启用 Research 模式
-    await selectModel("opus");
+    await selectModel("Opus");
     await sleep(400);
     await enableResearchMode();
   } else if (model) {
@@ -445,9 +445,19 @@ async function selectModel(keyword) {
     return;
   }
   btn.click();
-  await sleep(400);
+  await sleep(1000);
 
-  // 遍历所有可见的菜单项，找含 keyword 的第一个
+  // 用 XPath 精确定位 font-ui span 中含 keyword 的选项
+  const optionSpan = document.evaluate(
+    `//span[@class="font-ui" and contains(normalize-space(),"${keyword}")]`,
+    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+  ).singleNodeValue;
+  if (optionSpan) {
+    optionSpan.click();
+    return;
+  }
+
+  // 兜底：遍历所有可见的菜单项，找含 keyword 的第一个
   const candidates = document.querySelectorAll(
     '[role="menuitem"], [role="option"], [data-testid*="model"]'
   );
@@ -466,43 +476,28 @@ async function selectModel(keyword) {
  * 2. 在菜单中找到含"Research"的选项并点击
  */
 async function enableResearchMode() {
-  // 找"+"按钮：通过 fieldset 内 button 里的 SVG 图标定位
-  let plusBtn = null;
-  const svgInFieldset = document.querySelector('fieldset button svg');
-  if (svgInFieldset) {
-    plusBtn = svgInFieldset.closest('button');
-  }
-  if (!plusBtn) {
-    plusBtn = findElement(PLUS_BTN_SELECTORS);
-  }
-
-  if (!plusBtn) {
-    console.warn("[Claude2API] '+' button not found");
+  // 点击 fieldset 内按钮的第二个 span 子元素展开菜单
+  const triggerSpan = document.querySelector('fieldset button > span:nth-child(2) > span');
+  if (!triggerSpan) {
+    console.warn("[Claude2API] Research trigger span not found");
     return;
   }
-  plusBtn.click();
+  triggerSpan.click();
   await sleep(400);
 
-  // 在展开的菜单中找含"Research"文字的选项
-  const menuItems = document.querySelectorAll(
-    '[role="menuitem"], [role="option"], [role="menuitemcheckbox"], button'
-  );
-  for (const el of menuItems) {
-    const text = (el.textContent || el.getAttribute("aria-label") || "").toLowerCase();
-    if (text.includes("research")) {
-      const pressed = el.getAttribute("aria-pressed");
-      const isActive = pressed === "true" || el.classList.contains("active") || el.classList.contains("selected");
-      if (!isActive) {
-        el.click();
-        await sleep(300);
-        console.log("[Claude2API] Research mode enabled");
-      } else {
-        console.log("[Claude2API] Research mode already active");
-      }
-      return;
-    }
+  // 用 XPath 精确定位文字为"Research"的 span 并点击
+  const researchSpan = document.evaluate(
+    '//span[contains(@class,"block") and contains(@class,"truncate") and normalize-space()="Research"]',
+    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+  ).singleNodeValue;
+
+  if (!researchSpan) {
+    console.warn("[Claude2API] Research mode option not found in menu");
+    return;
   }
-  console.warn("[Claude2API] Research mode option not found in menu");
+  researchSpan.click();
+  await sleep(300);
+  console.log("[Claude2API] Research mode enabled");
 }
 
 // ─── 最近对话列表 ──────────────────────────────────────────────────────────────

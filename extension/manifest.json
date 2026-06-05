@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Claude2API Bridge",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "将 claude.ai 网页端转换为 OpenAI 兼容 API（分体式中转）",
   "permissions": [
     "tabs",
