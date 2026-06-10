@@ -527,8 +527,19 @@ async function selectChat(index) {
   const items = document.querySelectorAll('a[data-dd-action-name="sidebar-chat-item"]');
   const el = items[index];
   if (!el) throw new Error(`对话序号 ${index + 1} 不存在`);
+
+  const prevUrl = location.href;
   el.click();
+
+  // 等待 URL 变化，确认 SPA 跳转已发生（避免命中旧页面的输入框就提前返回）
+  const navStart = Date.now();
+  while (location.href === prevUrl && Date.now() - navStart < 5000) {
+    await sleep(100);
+  }
+
+  // 等待新页面的输入框及助手消息渲染完成
   await waitForElement(INPUT_SELECTORS, 10_000);
+  await waitForElement(RESPONSE_SELECTORS, 5_000); // 空对话会等满后超时返回，无副作用
 }
 
 // ─── 等待发送按钮可用（图片上传完成后才会 enabled） ────────────────────────────
